@@ -1,9 +1,16 @@
 // import javax.swing.JFrame;
 import javax.swing.*;
 import javax.swing.border.Border;
+import javax.swing.border.EmptyBorder;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.jar.JarEntry;
 
 
@@ -12,7 +19,9 @@ public class Server extends JFrame implements ActionListener{
     JTextField textField;
     JPanel main;
     static Box verticle = Box.createVerticalBox();
-
+    static JFrame f = new JFrame();
+    static DataOutputStream dout;
+    
     Server(){
         int frameWidth = 450;
         int frameHeight = 700;
@@ -128,35 +137,83 @@ public class Server extends JFrame implements ActionListener{
         setVisible(true);
     }
 
-    public static void main (String []args) throws Exception{
-        new Server();
-
-    }
 
     @Override
     public void actionPerformed(ActionEvent ae) {
-        // TODO Auto-generated method stub
-        String message = textField.getText();
+        try {
+            String out = textField.getText();
+
+            JPanel p2 = formatLabel(out);
+
+            main.setLayout(new BorderLayout());
+
+            JPanel right = new JPanel(new BorderLayout());
+            right.add(p2, BorderLayout.LINE_END);
+            verticle.add(right);
+            verticle.add(Box.createVerticalStrut(15));
+
+            main.add(verticle, BorderLayout.PAGE_START);
+
+            dout.writeUTF(out);
+
+            textField.setText("");
+
+            repaint();
+            invalidate();
+            validate();   
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static JPanel formatLabel(String out) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         
-        JLabel messageLabel = new JLabel(message);
-        JPanel messagePanel = new JPanel();
-        messagePanel.add((messageLabel));
-        messagePanel.setBackground(new Color(227, 245, 235));
-        messagePanel.setForeground(Color.GREEN);
-        main.setLayout(new BorderLayout());
-
-        JPanel right = new JPanel(new BorderLayout());
-        right.add(messagePanel, BorderLayout.LINE_END);
-
-        right.setBackground(new Color(227, 245, 235));
-        verticle.add(right);
-        verticle.add(Box.createVerticalStrut(15));
-
-        main.add(verticle,BorderLayout.PAGE_START);
+        JLabel output = new JLabel("<html><p style=\"width: 150px\">" + out + "</p></html>");
+        output.setFont(new Font("Tahoma", Font.PLAIN, 16));
+        output.setBackground(new Color(37, 211, 102));
+        output.setOpaque(true);
+        output.setBorder(new EmptyBorder(15, 15, 15, 50));
         
-        // refresh the page
-        repaint();
-        invalidate();
-        validate();
+        panel.add(output);
+        
+        Calendar cal = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
+        
+        JLabel time = new JLabel();
+        time.setText(sdf.format(cal.getTime()));
+        
+        panel.add(time);
+        
+        return panel;
+    }
+
+
+    
+
+       public static void main (String []args) throws Exception{
+        new Server();
+        
+        try {
+            ServerSocket skt = new ServerSocket(6001);
+            while(true) {
+                Socket s = skt.accept();
+                DataInputStream din = new DataInputStream(s.getInputStream());
+                dout = new DataOutputStream(s.getOutputStream());
+                
+                while(true) {
+                    String msg = din.readUTF();
+                    JPanel panel = formatLabel(msg);
+                    
+                    JPanel left = new JPanel(new BorderLayout());
+                    left.add(panel, BorderLayout.LINE_START);
+                    verticle.add(left);
+                    f.validate();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
